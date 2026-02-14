@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moiré Neural Network — Geometry-Based Computing</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Crimson+Pro:ital,wght@0,300;0,600;1,300&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #1e1e2e;
+    --text: #c8c8d4;
+    --dim: #5a5a70;
+    --accent: #e8c840;
+    --cyan: #40c8c8;
+    --green: #40c870;
+    --red: #c84040;
+    --purple: #8868d0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  .header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .header h1 {
+    font-family: 'Crimson Pro', serif;
+    font-weight: 300;
+    font-size: 28px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+
+  .header .subtitle {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 80px);
+  }
+
+  .panel {
+    background: var(--surface);
+    padding: 24px;
+    overflow-y: auto;
+  }
+
+  .panel-title {
+    font-family: 'Crimson Pro', serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 1px;
+  }
+
+  .canvas-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  canvas {
+    border: 1px solid var(--border);
+    image-rendering: pixelated;
+  }
+
+  .neuron-label {
+    font-size: 10px;
+    color: var(--dim);
+    text-align: center;
+    margin-top: 4px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .neuron-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .control-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .control-row label {
+    font-size: 11px;
+    color: var(--dim);
+    min-width: 140px;
+    letter-spacing: 1px;
+  }
+
+  .control-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    height: 4px;
+  }
+
+  .control-row .val {
+    font-size: 11px;
+    color: var(--cyan);
+    min-width: 40px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .btn {
+    padding: 8px 20px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .btn.active {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .metric {
+    background: var(--bg);
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+  }
+
+  .metric .label {
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .metric .value {
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--cyan);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric .value.accent { color: var(--accent); }
+  .metric .value.green { color: var(--green); }
+  .metric .value.red { color: var(--red); }
+
+  .log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 12px;
+    font-size: 11px;
+    line-height: 1.8;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 16px;
+    color: var(--dim);
+  }
+
+  .log .highlight { color: var(--accent); }
+  .log .ok { color: var(--green); }
+  .log .err { color: var(--red); }
+
+  .explanation {
+    font-family: 'Crimson Pro', serif;
+    font-size: 15px;
+    font-weight: 300;
+    line-height: 1.8;
+    color: var(--dim);
+    margin: 12px 0;
+    font-style: italic;
+  }
+
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 11px;
+  }
+
+  .comparison-table th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
+    font-weight: 400;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 9px;
+  }
+
+  .comparison-table td {
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(30,30,46,0.5);
+    color: var(--text);
+  }
+
+  .comparison-table tr:hover td {
+    background: rgba(232, 200, 64, 0.03);
+  }
+
+  .section-break {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  .xor-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin: 12px 0;
+    max-width: 200px;
+  }
+
+  .xor-cell {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Moiré Neural Network</h1>
+  <span class="subtitle">Geometry-Based Computing · No Stored Weights</span>
+</div>
+
+<div class="main-grid">
+  <!-- LEFT PANEL: Visualization -->
+  <div class="panel">
+    <div class="panel-title">Neuron Grid Geometries</div>
+    
+    <p class="explanation">
+      Each "neuron" is a 2D grid pattern with a specific frequency and angle. 
+      Computation happens when grids overlap — the moiré interference IS the weight.
+    </p>
+
+    <div class="canvas-row" id="neuronRow"></div>
+
+    <div class="panel-title" style="margin-top:20px;">Interference Patterns (The "Weights")</div>
+    
+    <p class="explanation">
+      These emerge from pure geometric superposition. No multiplication, 
+      no weight storage. The relationship IS the pattern.
+    </p>
+
+    <div class="canvas-row" id="interferenceRow"></div>
+
+    <div class="section-break"></div>
+
+    <div class="panel-title">Signal Propagation</div>
+    <canvas id="propagationCanvas" width="600" height="180"></canvas>
+    <div class="neuron-label">Input signal sampled through geometric interference → emergent output</div>
+
+    <div class="section-break"></div>
+
+    <div class="panel-title">XOR Classification (The Hard Problem)</div>
+    <p class="explanation">
+      XOR is not linearly separable — standard single-layer perceptrons fail. 
+      Moiré interference creates nonlinear decision boundaries from pure geometry.
+    </p>
+    <div style="display:flex; gap:24px; align-items:flex-start;">
+      <div>
+        <canvas id="xorCanvas" width="200" height="200"></canvas>
+        <div class="neuron-label">Decision boundary via moiré</div>
+      </div>
+      <div>
+        <div class="xor-grid" id="xorResults"></div>
+        <div class="neuron-label" style="margin-top:8px;" id="xorAccuracy"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Controls & Metrics -->
+  <div class="panel">
+    <div class="panel-title">Neuron Parameters</div>
+    
+    <div class="controls">
+      <div class="control-row">
+        <label>Neuron A freq</label>
+        <input type="range" id="freqA" min="2" max="40" value="8" step="1">
+        <span class="val" id="freqAVal">8</span>
+      </div>
+      <div class="control-row">
+        <label>Neuron A angle</label>
+        <input type="range" id="angleA" min="0" max="180" value="0" step="1">
+        <span class="val" id="angleAVal">0°</span>
+      </div>
+      <div class="control-row">
+        <label>Neuron B freq</label>
+        <input type="range" id="freqB" min="2" max="40" value="10" step="1">
+        <span class="val" id="freqBVal">10</span>
+      </div>
+      <div class="control-row">
+        <label>Neuron B angle</label>
+        <input type="range" id="angleB" min="0" max="180" value="30" step="1">
+        <span class="val" id="angleBVal">30°</span>
+      </div>
+      <div class="control-row">
+        <label>Neuron C freq</label>
+        <input type="range" id="freqC" min="2" max="40" value="14" step="1">
+        <span class="val" id="freqCVal">14</span>
+      </div>
+      <div class="control-row">
+        <label>Neuron C angle</label>
+        <input type="range" id="angleC" min="0" max="180" value="75" step="1">
+        <span class="val" id="angleCVal">75°</span>
+      </div>
+    </div>
+
+    <div class="section-break"></div>
+
+    <div class="panel-title">Operating Mode</div>
+    <div class="btn-row">
+      <button class="btn active" id="modeStatic" onclick="setMode('static')">Static</button>
+      <button class="btn" id="modeEvolve" onclick="setMode('evolve')">Evolve Grids</button>
+      <button class="btn" id="modePulse" onclick="setMode('pulse')">Pulse Input</button>
+      <button class="btn" id="modeLearn" onclick="setMode('learn')">Learn XOR</button>
+    </div>
+
+    <div class="controls">
+      <div class="control-row">
+        <label>Evolution rate</label>
+        <input type="range" id="evolveRate" min="0" max="100" value="20" step="1">
+        <span class="val" id="evolveRateVal">20</span>
+      </div>
+      <div class="control-row">
+        <label>Grid resolution</label>
+        <input type="range" id="gridRes" min="32" max="256" value="128" step="32">
+        <span class="val" id="gridResVal">128</span>
+      </div>
+    </div>
+
+    <div class="section-break"></div>
+
+    <div class="panel-title">Metrics</div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="label">Moiré Frequency</div>
+        <div class="value accent" id="metricMoire">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">Effective Weight</div>
+        <div class="value" id="metricWeight">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">Ops (Geom vs MLP)</div>
+        <div class="value green" id="metricOps">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">XOR Accuracy</div>
+        <div class="value" id="metricXor">—</div>
+      </div>
+    </div>
+
+    <div class="section-break"></div>
+
+    <div class="panel-title">Why This Could Be Faster</div>
+    <table class="comparison-table">
+      <tr>
+        <th>Property</th>
+        <th>Standard NN</th>
+        <th>Moiré Net</th>
+      </tr>
+      <tr>
+        <td>Weight storage</td>
+        <td>O(N²) — explicit matrix</td>
+        <td>O(N) — grid params only</td>
+      </tr>
+      <tr>
+        <td>Forward pass</td>
+        <td>Matrix multiply</td>
+        <td>Geometric superposition</td>
+      </tr>
+      <tr>
+        <td>Freq-dependent</td>
+        <td>No (same weight all freqs)</td>
+        <td>Yes (moiré shifts with input freq)</td>
+      </tr>
+      <tr>
+        <td>Nonlinearity</td>
+        <td>Added (ReLU, sigmoid)</td>
+        <td>Intrinsic (aliasing)</td>
+      </tr>
+      <tr>
+        <td>Learning</td>
+        <td>Backprop weight update</td>
+        <td>Grid remodeling (plasticity)</td>
+      </tr>
+      <tr>
+        <td>Parallelism</td>
+        <td>SIMD / GPU matmul</td>
+        <td>Optical / physical (free)</td>
+      </tr>
+    </table>
+
+    <div class="section-break"></div>
+
+    <div class="panel-title">Event Log</div>
+    <div class="log" id="log"></div>
+  </div>
+</div>
+
+<script>
+// =============================================================
+// MOIRÉ NEURAL NETWORK — Geometry-Based Computing Prototype
+// =============================================================
+// Core idea: neurons are grid patterns, computation = interference
+// No stored weights. The moiré IS the weight.
+// =============================================================
+
+const SIZE = 128;
+let mode = 'static';
+let animFrame = null;
+let time = 0;
+let logEl;
+
+// Neuron grids (frequency, angle in radians)
+let neurons = [
+  { freq: 8, angle: 0, canvas: null, ctx: null, data: null },
+  { freq: 10, angle: Math.PI/6, canvas: null, ctx: null, data: null },
+  { freq: 14, angle: 75*Math.PI/180, canvas: null, ctx: null, data: null }
+];
+
+// Interference canvases
+let interferences = [];
+
+// XOR learning state
+let xorNeurons = [
+  { freq: 8, angle: 0 },
+  { freq: 12, angle: Math.PI/4 },
+  { freq: 16, angle: Math.PI/2 }
+];
+let xorBestAccuracy = 0;
+let xorGeneration = 0;
+
+// Propagation history
+let propHistory = [];
+
+function init() {
+  logEl = document.getElementById('log');
+  
+  // Create neuron canvases
+  const neuronRow = document.getElementById('neuronRow');
+  const names = ['A', 'B', 'C'];
+  neurons.forEach((n, i) => {
+    const card = document.createElement('div');
+    card.className = 'neuron-card';
+    const c = document.createElement('canvas');
+    c.width = SIZE; c.height = SIZE;
+    c.style.width = '140px'; c.style.height = '140px';
+    n.canvas = c;
+    n.ctx = c.getContext('2d');
+    n.data = n.ctx.createImageData(SIZE, SIZE);
+    const label = document.createElement('div');
+    label.className = 'neuron-label';
+    label.textContent = `Neuron ${names[i]}`;
+    card.appendChild(c);
+    card.appendChild(label);
+    neuronRow.appendChild(card);
+  });
+
+  // Create interference canvases (AB, BC, ABC)
+  const intRow = document.getElementById('interferenceRow');
+  const intNames = ['A⊗B', 'B⊗C', 'A⊗B⊗C'];
+  for (let i = 0; i < 3; i++) {
+    const card = document.createElement('div');
+    card.className = 'neuron-card';
+    const c = document.createElement('canvas');
+    c.width = SIZE; c.height = SIZE;
+    c.style.width = '140px'; c.style.height = '140px';
+    const ctx = c.getContext('2d');
+    const label = document.createElement('div');
+    label.className = 'neuron-label';
+    label.textContent = intNames[i];
+    card.appendChild(c);
+    card.appendChild(label);
+    intRow.appendChild(card);
+    interferences.push({ canvas: c, ctx: ctx, data: ctx.createImageData(SIZE, SIZE) });
+  }
+
+  // Bind controls
+  ['freqA', 'angleA', 'freqB', 'angleB', 'freqC', 'angleC', 'evolveRate', 'gridRes'].forEach(id => {
+    document.getElementById(id).addEventListener('input', onControlChange);
+  });
+
+  log('System initialized. Three geometric neurons ready.');
+  log('Adjust frequencies and angles to see moiré interference emerge.');
+  
+  render();
+}
+
+function onControlChange() {
+  neurons[0].freq = +document.getElementById('freqA').value;
+  neurons[0].angle = +document.getElementById('angleA').value * Math.PI / 180;
+  neurons[1].freq = +document.getElementById('freqB').value;
+  neurons[1].angle = +document.getElementById('angleB').value * Math.PI / 180;
+  neurons[2].freq = +document.getElementById('freqC').value;
+  neurons[2].angle = +document.getElementById('angleC').value * Math.PI / 180;
+
+  document.getElementById('freqAVal').textContent = neurons[0].freq;
+  document.getElementById('angleAVal').textContent = document.getElementById('angleA').value + '°';
+  document.getElementById('freqBVal').textContent = neurons[1].freq;
+  document.getElementById('angleBVal').textContent = document.getElementById('angleB').value + '°';
+  document.getElementById('freqCVal').textContent = neurons[2].freq;
+  document.getElementById('angleCVal').textContent = document.getElementById('angleC').value + '°';
+  document.getElementById('evolveRateVal').textContent = document.getElementById('evolveRate').value;
+  document.getElementById('gridResVal').textContent = document.getElementById('gridRes').value;
+
+  if (mode === 'static') render();
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.btn-row .btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode' + m.charAt(0).toUpperCase() + m.slice(1)).classList.add('active');
+  
+  if (m === 'learn') {
+    xorBestAccuracy = 0;
+    xorGeneration = 0;
+    xorNeurons = [
+      { freq: 5 + Math.random() * 20, angle: Math.random() * Math.PI },
+      { freq: 5 + Math.random() * 20, angle: Math.random() * Math.PI },
+      { freq: 5 + Math.random() * 20, angle: Math.random() * Math.PI }
+    ];
+    log('<span class="highlight">XOR learning started.</span> Evolving grid geometries...');
+  }
+
+  if (m === 'pulse') {
+    propHistory = [];
+    log('<span class="highlight">Pulse mode.</span> Watching signal propagate through geometric layers.');
+  }
+  
+  if (animFrame) cancelAnimationFrame(animFrame);
+  if (m !== 'static') animate();
+  else render();
+}
+
+// Generate grid pattern for a neuron
+function generateGrid(freq, angle, size, phase) {
+  phase = phase || 0;
+  const grid = new Float32Array(size * size);
+  const cosA = Math.cos(angle);
+  const sinA = Math.sin(angle);
+  const scale = (2 * Math.PI * freq) / size;
+  
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const rx = x * cosA + y * sinA;
+      // Square wave grid (like checkerboard lines)
+      const val = Math.sin(rx * scale + phase) > 0 ? 1.0 : 0.0;
+      grid[y * size + x] = val;
+    }
+  }
+  return grid;
+}
+
+// Compute moiré interference between multiple grids
+function computeInterference(grids) {
+  const size = grids[0].length;
+  const result = new Float32Array(size);
+  for (let i = 0; i < size; i++) {
+    let product = 1.0;
+    for (const g of grids) {
+      product *= g[i];
+    }
+    // Also compute XOR-like interference
+    let xorVal = 0;
+    for (const g of grids) {
+      xorVal += g[i];
+    }
+    // Blend: multiplicative + modular arithmetic
+    result[i] = 0.5 * product + 0.5 * (xorVal % 2 === 0 ? 0 : 1);
+  }
+  return result;
+}
+
+// Draw grid to canvas
+function drawGrid(grid, ctx, imageData, size, hue) {
+  const d = imageData.data;
+  for (let i = 0; i < size * size; i++) {
+    const v = grid[i];
+    const idx = i * 4;
+    if (hue === undefined) {
+      const c = Math.floor(v * 255);
+      d[idx] = c; d[idx+1] = c; d[idx+2] = c; d[idx+3] = 255;
+    } else {
+      // Tinted
+      const rgb = hslToRgb(hue, 0.6, v * 0.5 + 0.05);
+      d[idx] = rgb[0]; d[idx+1] = rgb[1]; d[idx+2] = rgb[2]; d[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function hslToRgb(h, s, l) {
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+// Compute effective weight from moiré
+function computeEffectiveWeight(gridA, gridB, size) {
+  // The "weight" is the spatial correlation of the moiré pattern
+  let sumAB = 0, sumA = 0, sumB = 0;
+  const n = size * size;
+  for (let i = 0; i < n; i++) {
+    sumAB += gridA[i] * gridB[i];
+    sumA += gridA[i];
+    sumB += gridB[i];
+  }
+  // Normalized correlation = effective weight
+  const meanA = sumA / n;
+  const meanB = sumB / n;
+  let covAB = 0, varA = 0, varB = 0;
+  for (let i = 0; i < n; i++) {
+    const da = gridA[i] - meanA;
+    const db = gridB[i] - meanB;
+    covAB += da * db;
+    varA += da * da;
+    varB += db * db;
+  }
+  if (varA < 1e-10 || varB < 1e-10) return 0;
+  return covAB / Math.sqrt(varA * varB);
+}
+
+// XOR via moiré: classify (x,y) in [0,1]x[0,1]
+function moireXOR(x, y, neurs) {
+  // Each neuron creates a grid value at position (x,y)
+  let sum = 0;
+  for (const n of neurs) {
+    const rx = x * Math.cos(n.angle) + y * Math.sin(n.angle);
+    const val = Math.sin(rx * n.freq * 2 * Math.PI) > 0 ? 1 : 0;
+    sum += val;
+  }
+  // Moiré-based classification: odd parity = 1, even = 0
+  return sum % 2;
+}
+
+function evaluateXOR(neurs) {
+  // Test the 4 XOR cases
+  const cases = [[0, 0, 0], [1, 0, 1], [0, 1, 1], [1, 1, 0]];
+  let correct = 0;
+  const results = [];
+  for (const [x, y, target] of cases) {
+    // Sample at normalized position
+    const nx = x * 0.8 + 0.1;
+    const ny = y * 0.8 + 0.1;
+    const pred = moireXOR(nx, ny, neurs);
+    if (pred === target) correct++;
+    results.push({ x, y, target, pred, correct: pred === target });
+  }
+  return { accuracy: correct / 4, results };
+}
+
+// Evolve XOR neurons (grid remodeling = learning)
+function evolveXORStep() {
+  xorGeneration++;
+  
+  // Mutate: randomly adjust one neuron's geometry
+  const candidate = xorNeurons.map(n => ({...n}));
+  const idx = Math.floor(Math.random() * candidate.length);
+  candidate[idx].freq += (Math.random() - 0.5) * 2;
+  candidate[idx].angle += (Math.random() - 0.5) * 0.2;
+  candidate[idx].freq = Math.max(2, Math.min(40, candidate[idx].freq));
+  
+  const result = evaluateXOR(candidate);
+  if (result.accuracy >= xorBestAccuracy) {
+    xorBestAccuracy = result.accuracy;
+    xorNeurons = candidate;
+    if (result.accuracy === 1.0 && xorGeneration % 50 === 0) {
+      log(`<span class="ok">Gen ${xorGeneration}: XOR solved!</span> freq=[${xorNeurons.map(n=>n.freq.toFixed(1)).join(', ')}]`);
+    }
+  }
+  
+  return evaluateXOR(xorNeurons);
+}
+
+// Draw XOR decision boundary
+function drawXORBoundary(neurs) {
+  const canvas = document.getElementById('xorCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const imgData = ctx.createImageData(w, h);
+  const d = imgData.data;
+  
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      const x = px / w;
+      const y = py / h;
+      const pred = moireXOR(x, y, neurs);
+      const idx = (py * w + px) * 4;
+      if (pred === 1) {
+        d[idx] = 64; d[idx+1] = 200; d[idx+2] = 200; d[idx+3] = 255;
+      } else {
+        d[idx] = 20; d[idx+1] = 20; d[idx+2] = 30; d[idx+3] = 255;
+      }
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  
+  // Draw XOR points
+  const cases = [[0,0,0],[1,0,1],[0,1,1],[1,1,0]];
+  for (const [x, y, target] of cases) {
+    const px = x * w * 0.8 + w * 0.1;
+    const py = y * h * 0.8 + h * 0.1;
+    ctx.beginPath();
+    ctx.arc(px, py, 8, 0, Math.PI * 2);
+    ctx.fillStyle = target === 1 ? '#e8c840' : '#c84040';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(target, px, py);
+  }
+}
+
+function drawXORResults(results) {
+  const container = document.getElementById('xorResults');
+  container.innerHTML = '';
+  
+  const labels = ['(0,0)', '(1,0)', '(0,1)', '(1,1)'];
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    const cell = document.createElement('div');
+    cell.className = 'xor-cell';
+    cell.style.background = r.correct ? 'rgba(64,200,112,0.2)' : 'rgba(200,64,64,0.2)';
+    cell.style.color = r.correct ? 'var(--green)' : 'var(--red)';
+    cell.textContent = r.pred;
+    container.appendChild(cell);
+  }
+  
+  document.getElementById('xorAccuracy').textContent = 
+    `${(results.filter(r=>r.correct).length)}/4 correct`;
+}
+
+// Propagation visualization
+function drawPropagation() {
+  const canvas = document.getElementById('propagationCanvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, w, h);
+  
+  // Input signal (sinusoidal pulse)
+  const inputFreq = neurons[0].freq;
+  const pulsePhase = time * 0.05;
+  
+  // Layer 1: input through neuron A grid
+  // Layer 2: through A⊗B interference
+  // Layer 3: through A⊗B⊗C interference
+  
+  const layers = 3;
+  const layerW = w / (layers + 1);
+  
+  for (let layer = 0; layer <= layers; layer++) {
+    const x = (layer + 0.5) * layerW;
+    
+    // Draw vertical line
+    ctx.strokeStyle = 'rgba(30,30,46,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+    
+    // Label
+    ctx.fillStyle = 'var(--dim)';
+    ctx.font = '9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    const labels = ['Input', 'Grid A', 'A⊗B', 'A⊗B⊗C'];
+    ctx.fillStyle = '#5a5a70';
+    ctx.fillText(labels[layer], x, 12);
+    
+    // Draw signal at this layer
+    ctx.beginPath();
+    const colors = ['#c8c8d4', '#e8c840', '#40c8c8', '#40c870'];
+    ctx.strokeStyle = colors[layer];
+    ctx.lineWidth = 1.5;
+    
+    for (let py = 0; py < h; py++) {
+      const y = py / h;
+      let val;
+      
+      if (layer === 0) {
+        // Pure input sine
+        val = Math.sin(y * inputFreq * 2 * Math.PI + pulsePhase);
+      } else if (layer === 1) {
+        // Sampled through grid A
+        const gridA = Math.sin(y * neurons[0].freq * 2 * Math.PI) > 0 ? 1 : 0;
+        val = Math.sin(y * inputFreq * 2 * Math.PI + pulsePhase) * gridA;
+      } else if (layer === 2) {
+        // Through A⊗B moiré
+        const gridA = Math.sin(y * neurons[0].freq * 2 * Math.PI) > 0 ? 1 : 0;
+        const gridB = Math.sin(y * neurons[1].freq * 2 * Math.PI) > 0 ? 1 : 0;
+        const moire = gridA * gridB;
+        val = Math.sin(y * inputFreq * 2 * Math.PI + pulsePhase) * moire;
+      } else {
+        // Through A⊗B⊗C
+        const gridA = Math.sin(y * neurons[0].freq * 2 * Math.PI) > 0 ? 1 : 0;
+        const gridB = Math.sin(y * neurons[1].freq * 2 * Math.PI) > 0 ? 1 : 0;
+        const gridC = Math.sin(y * neurons[2].freq * 2 * Math.PI) > 0 ? 1 : 0;
+        const moire = (gridA + gridB + gridC) % 2;
+        val = Math.sin(y * inputFreq * 2 * Math.PI + pulsePhase) * moire;
+      }
+      
+      const px = x + val * layerW * 0.35;
+      if (py === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+  
+  // Draw connecting arrows
+  ctx.strokeStyle = 'rgba(90,90,112,0.3)';
+  ctx.setLineDash([4, 4]);
+  for (let i = 0; i < layers; i++) {
+    const x1 = (i + 0.8) * layerW;
+    const x2 = (i + 1.2) * layerW;
+    ctx.beginPath();
+    ctx.moveTo(x1, h/2);
+    ctx.lineTo(x2, h/2);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+function render() {
+  const s = SIZE;
+  const phase = mode === 'pulse' ? time * 0.03 : 0;
+  
+  // Generate neuron grids
+  const grids = neurons.map(n => generateGrid(n.freq, n.angle, s, phase));
+  
+  // Draw neuron grids
+  const hues = [0.13, 0.5, 0.33]; // gold, cyan, green
+  neurons.forEach((n, i) => {
+    drawGrid(grids[i], n.ctx, n.data, s, hues[i]);
+  });
+  
+  // Compute and draw interferences
+  const intAB = computeInterference([grids[0], grids[1]]);
+  const intBC = computeInterference([grids[1], grids[2]]);
+  const intABC = computeInterference([grids[0], grids[1], grids[2]]);
+  
+  drawGrid(intAB, interferences[0].ctx, interferences[0].data, s, 0.08);
+  drawGrid(intBC, interferences[1].ctx, interferences[1].data, s, 0.55);
+  drawGrid(intABC, interferences[2].ctx, interferences[2].data, s, 0.75);
+  
+  // Compute metrics
+  const effectiveWeight = computeEffectiveWeight(grids[0], grids[1], s);
+  const moireFreq = Math.abs(neurons[0].freq - neurons[1].freq);
+  const geomOps = neurons.length * 3; // freq + angle + phase per neuron
+  const mlpOps = s * s * neurons.length; // weight per connection
+  
+  document.getElementById('metricMoire').textContent = moireFreq.toFixed(1) + ' Hz';
+  document.getElementById('metricWeight').textContent = effectiveWeight.toFixed(4);
+  document.getElementById('metricOps').textContent = `${geomOps} vs ${mlpOps}`;
+  
+  // Propagation
+  drawPropagation();
+  
+  // XOR
+  const activeNeurs = mode === 'learn' ? xorNeurons : neurons.map(n => ({freq: n.freq, angle: n.angle}));
+  const xorResult = evaluateXOR(activeNeurs);
+  drawXORBoundary(activeNeurs);
+  drawXORResults(xorResult.results);
+  document.getElementById('metricXor').textContent = (xorResult.accuracy * 100).toFixed(0) + '%';
+  document.getElementById('metricXor').className = 'value ' + (xorResult.accuracy === 1 ? 'green' : xorResult.accuracy >= 0.5 ? 'accent' : 'red');
+}
+
+function animate() {
+  time++;
+  
+  if (mode === 'evolve') {
+    const rate = +document.getElementById('evolveRate').value / 100;
+    neurons.forEach(n => {
+      n.freq += (Math.sin(time * 0.01 * rate + n.angle) * 0.1);
+      n.freq = Math.max(2, Math.min(40, n.freq));
+      n.angle += Math.sin(time * 0.007 * rate) * 0.005;
+    });
+    // Sync UI
+    document.getElementById('freqA').value = Math.round(neurons[0].freq);
+    document.getElementById('freqB').value = Math.round(neurons[1].freq);
+    document.getElementById('freqC').value = Math.round(neurons[2].freq);
+    document.getElementById('freqAVal').textContent = Math.round(neurons[0].freq);
+    document.getElementById('freqBVal').textContent = Math.round(neurons[1].freq);
+    document.getElementById('freqCVal').textContent = Math.round(neurons[2].freq);
+  }
+  
+  if (mode === 'learn') {
+    // Run multiple evolution steps per frame
+    for (let i = 0; i < 50; i++) {
+      evolveXORStep();
+    }
+    if (xorGeneration % 500 === 0) {
+      const r = evaluateXOR(xorNeurons);
+      log(`Gen <span class="highlight">${xorGeneration}</span>: accuracy=${(r.accuracy*100).toFixed(0)}% freq=[${xorNeurons.map(n=>n.freq.toFixed(1)).join(',')}]`);
+    }
+  }
+  
+  render();
+  animFrame = requestAnimationFrame(animate);
+}
+
+function log(msg) {
+  const line = document.createElement('div');
+  line.innerHTML = msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+window.addEventListener('load', init);
+</script>
+
+</body>
+</html>
